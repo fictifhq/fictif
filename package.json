@@ -1,0 +1,64 @@
+{
+  "name": "fictif",
+  "version": "0.0.1",
+  "description": "The modern, hybrid framework for Vue 3.",
+  "author": "Abderrahmene Merzoug",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fictifhq/fictif.git"
+  },
+  "keywords": [
+    "vue",
+    "vite",
+    "laravel",
+    "inertia",
+    "router",
+    "full-stack",
+    "framework"
+  ],
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/index.d.ts"
+    },
+    "./style": {
+      "import": "./dist/client/style.css"
+    },
+    "./plugin": {
+      "import": "./dist/plugin/index.js",
+      "types": "./dist/plugin/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/client/index.js",
+  "module": "./dist/client/index.js",
+  "types": "./src/client/index.d.ts",
+  "scripts": {
+    "build": "node build.mjs",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.3"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.3",
+    "eslint-plugin-vue": "^10.3.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.4.5",
+    "vite": "^5.4.19",
+    "vite-plugin-checker": "^0.10.1",
+    "vite-plugin-dts": "^4.5.4",
+    "vue": "^3.4.21"
+  }
+}

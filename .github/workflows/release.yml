@@ -1,0 +1,57 @@
+name: Release Branch Build
+
+on:
+  push:
+    branches: [main] # trigger on main commits
+  workflow_dispatch: # allows manual trigger
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # allow orphan switching later
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install
+
+      - name: Run build.mjs
+        run: pnpm exec node build.mjs
+
+      - name: Prepare release folder
+        run: |
+          mkdir release
+          cp -r dist release/
+          cp package.json release/
+          cp README.md release/
+
+      - name: Switch to clean release branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git switch --orphan release-temp
+          git reset --hard
+
+          rm -rf *
+          cp -r release/* .
+
+          git add .
+          git commit -m "chore: release build from main at $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+      - name: Force push to release branch
+        run: |
+          git push -f origin HEAD:release
+
+      - name: Check release artifacts
+        run: test -d release/dist && echo "Artifacts exist" || exit 1
