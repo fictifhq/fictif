@@ -1,5 +1,6 @@
 # Fictif
 
+[Documentation](https://fictif.gitbook.io/fictif)
 [GitHub Repo](https://github.com/fictifhq/fictif)
 [NPM Package](https://www.npmjs.com/package/fictif)
 
@@ -19,7 +20,7 @@ Whether you're building Laravel hybrids, Electron apps, PWAs, or fully client-si
 - **Secure & Performant:** A tiny, dependency-free client, build-time route obfuscation, and first-class support for modern web security practices.
 
 ## Documentation
-We are currently writing documentation for this library, but we will cover basic usage here.
+Full documentation at [GitBook](https://fictif.gitbook.io/fictif)
 
 ## Installation
 

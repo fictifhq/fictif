@@ -14,7 +14,7 @@ import { Router, useRouter } from "./composables/router.js";
 import { createInertiaHandler } from "./router-factories.js";
 import Display from "./components/display.vue";
 import { MetaTag, useHead, HeadData } from "./composables/head.js";
-import { defaults, useProgress } from "./composables/progress.js";
+import { defaults, useCurtain } from "./composables/curtain.js";
 import Curtain from "./components/curtain.vue";
 import type { Page, VisitOptions, PageResult, RouterOptions } from "./types.js";
 
@@ -35,7 +35,6 @@ interface FictifAppOptions {
         | {
               delay?: number;
           };
-    version?: string | null;
     router?: RouterOptions | Router | ConfigRouterFunction;
     initialData?: string | object | undefined;
     copyInitialData?: boolean;
@@ -61,7 +60,6 @@ export async function createFictifApp(config?: FictifAppOptions | Router | Confi
         mountTo = "#app",
         setup,
         progress = {},
-        version = 'static',
         resolve: providedResolve,
         router: providedRouter,
         initialData = undefined,
@@ -102,32 +100,12 @@ export async function createFictifApp(config?: FictifAppOptions | Router | Confi
     const renderedPage = shallowRef<Page>({
                 component: '',
                 props: {},
-                url: location.pathname,
-                version
+                path: location.pathname,
+                version: 'static', // Handled in other places
             });
 
 
     const head = useHead();
-    const progressManager = useProgress();
-
-    // --- BIND CORE EVENT LISTENERS ---
-    if (progress != false) {
-        progressManager.start();
-
-        let progressTimeout: number | undefined;
-        router.on("navigation", () => {
-            progressTimeout = window.setTimeout(
-                progressManager.start,
-                (progress as any)?.delay || 0
-            );
-        });
-        const finishProgress = () => {
-            clearTimeout(progressTimeout);
-            progressManager.finish();
-        };
-        router.on("ready", finishProgress);
-        router.on("error", finishProgress);
-    }
 
     router.on(
         "push",
@@ -171,7 +149,7 @@ export async function createFictifApp(config?: FictifAppOptions | Router | Confi
             await router.push(initialData as PageResult);
         }else{
             // Manual router invoc
-            await router.go(location.pathname);
+            await router.visit(location.pathname);
         }
     })();
 
@@ -185,14 +163,10 @@ export async function createFictifApp(config?: FictifAppOptions | Router | Confi
 
             return () =>
                 h("div", { id: "fictif-root-wrapper" }, [
-                    h(Curtain, {
-                        show: progressManager.isLoading.value,
-                        message: progressManager.message.value,
-                        background: progressManager.background.value,
-                    }),
+                    h(Curtain, {}),
                     renderedPage.value && typeof renderedPage.value.component == "object"
                         ? h(Display, {
-                              key: renderedPage.value.url,
+                              key: renderedPage.value.path,
                               // @ts-ignore
                               screen: renderedPage.value.component,
                               headUpdate (data: HeadData) {
@@ -220,5 +194,26 @@ export async function createFictifApp(config?: FictifAppOptions | Router | Confi
 
     if(mountTo) {
         app.mount(mountTo);
+    }
+
+    const curtain = useCurtain();
+
+    // --- BIND CORE EVENT LISTENERS ---
+    if (progress != false) {
+        curtain.start();
+
+        let progressTimeout: number | undefined;
+        router.on("navigation", () => {
+            progressTimeout = window.setTimeout(
+                curtain.start,
+                (progress as any)?.delay || 0
+            );
+        });
+        const finishProgress = () => {
+            clearTimeout(progressTimeout);
+            curtain.done();
+        };
+        router.on("ready", finishProgress);
+        router.on("error", finishProgress);
     }
 }

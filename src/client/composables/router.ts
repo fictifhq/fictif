@@ -160,12 +160,6 @@ export class Router extends RouteMap<VisitOptions> {
                         link.getAttribute("method") || "get"
                     ).toLowerCase();
 
-                    if (!link.hasAttribute("download")) {
-                        await this.emit("navigation", {
-                            path: link.href,
-                        });
-                    }
-
                     if (!shouldInterceptLink(link, event)) return;
 
                     event.preventDefault();
@@ -284,7 +278,7 @@ export class Router extends RouteMap<VisitOptions> {
             method: options.method || "get",
             old: this.result,
         };
-        return this.evaluateRouteMap(req);
+        return this.dispatch(req);
     }
 }
 
