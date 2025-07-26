@@ -40,6 +40,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          git reset --hard
+          git clean -fdx  # remove untracked files/folders
+
           git switch --orphan release-temp
           git reset --hard
 
