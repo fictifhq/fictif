@@ -1,4 +1,5 @@
-name: Release Build and Publish
+```yaml
+name: Build and Publish to “release” Branch
 
 on:
   push:
@@ -32,31 +33,32 @@ jobs:
       - name: Run build
         run: pnpm exec node build.mjs
 
-      - name: Prepare release assets
+      - name: Prepare release artifacts
         run: |
           mkdir -p "${{ runner.temp }}/release"
           cp -r dist "${{ runner.temp }}/release/"
           cp package.json "${{ runner.temp }}/release/"
           cp README.md "${{ runner.temp }}/release/"
 
-      - name: Zip dist directory
+      - name: Publish to “release” branch
         run: |
-          cd "${{ runner.temp }}/release"
-          zip -r dist.zip dist
+          # Configure git user
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create or update GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: release-${{ github.run_number }}
-          name: Release #${{ github.run_number }}
-          target_commitish: ${{ github.sha }}
-          body: |
-            Automated hot release for run #${{ github.run_number }} on branch ${{ github.ref_name }}.
-          draft: false
-          prerelease: false
-          files: |
-            ${{ runner.temp }}/release/dist.zip
-            ${{ runner.temp }}/release/package.json
-            ${{ runner.temp }}/release/README.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Create a clean orphan branch
+          git checkout --orphan release
+
+          # Remove all files from the working tree
+          git rm -rf .
+
+          # Copy build artifacts into root
+          cp -r "${{ runner.temp }}/release/dist" ./dist
+          cp "${{ runner.temp }}/release/package.json" .
+          cp "${{ runner.temp }}/release/README.md" .
+
+          # Commit and force-push to release branch
+          git add dist package.json README.md
+          git commit -m "Automated update of release artifacts"
+          git push -f origin release
+```
