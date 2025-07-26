@@ -1,23 +1,24 @@
-name: Release Branch Build
+name: Release Build and Publish
 
 on:
   push:
-    branches: [main] # trigger on main commits
-  workflow_dispatch: # allows manual trigger
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  build-and-release:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main branch
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # allow orphan switching later
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
 
       - name: Install dependencies
         run: |
@@ -25,36 +26,46 @@ jobs:
           corepack prepare pnpm@latest --activate
           pnpm install
 
-      - name: Run build.mjs
+      - name: Run build
         run: pnpm exec node build.mjs
 
-      - name: Prepare release folder
+      - name: Prepare release assets
         run: |
-          mkdir release
-          cp -r dist release/
-          cp package.json release/
-          cp README.md release/
+          mkdir -p "${{ runner.temp }}/release"
+          cp -r dist "${{ runner.temp }}/release/"
+          cp package.json "${{ runner.temp }}/release/"
+          cp README.md "${{ runner.temp }}/release/"
 
-      - name: Switch to clean release branch
+      - name: Zip dist directory
+        run: |
+          cd "${{ runner.temp }}/release"
+          zip -r dist.zip dist
+
+      - name: Determine version
+        id: vars
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+
+      - name: Create Git tag
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f "v${VERSION}"
+          git push -f origin "v${VERSION}"
 
-          git reset --hard
-          git clean -fdx  # remove untracked files/folders
-
-          git switch --orphan release-temp
-          git reset --hard
-
-          rm -rf *
-          cp -r release/* .
-
-          git add .
-          git commit -m "chore: release build from main at $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-
-      - name: Force push to release branch
-        run: |
-          git push -f origin HEAD:release
-
-      - name: Check release artifacts
-        run: test -d release/dist && echo "Artifacts exist" || exit 1
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.vars.outputs.version }}
+          name: Release v${{ steps.vars.outputs.version }}
+          body: |
+            Automated release of version v${{ steps.vars.outputs.version }}.
+          draft: false
+          prerelease: false
+          files: |
+            ${{ runner.temp }}/release/dist.zip
+            ${{ runner.temp }}/release/package.json
+            ${{ runner.temp }}/release/README.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
