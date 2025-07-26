@@ -1,9 +1,11 @@
 // src/client/composables/route-map.ts
 
-type RequestObject = { method?: string; [key: string]: any };
-type NextFunction<T extends RequestObject> = (req: T) => Promise<any>;
-type Handler<T extends RequestObject> = (req: T, ...params: string[]) => any;
-type Middleware<T extends RequestObject> = (
+import { EventEmitter } from "./events";
+
+export type RequestObject = { method?: string; path?: string; [key: string]: any };
+export type NextFunction<T extends RequestObject> = (req: T) => Promise<any>;
+export type Handler<T extends RequestObject> = (req: T, ...params: string[]) => any;
+export type Middleware<T extends RequestObject> = (
     req: T,
     next: NextFunction<T>
 ) => any;
@@ -22,10 +24,26 @@ interface Route<T extends RequestObject> {
  * A professional-grade, generic, dependency-free routing engine with named routes,
  * middleware, and groups, inspired by modern backend frameworks like Laravel.
  */
-export class RouteMap<T extends RequestObject> {
+export class RouteMap<T extends RequestObject> extends EventEmitter {
     private routes: Route<T>[] = [];
     public middlewares: Record<string, Middleware<T>> = {};
     private unnamedMiddleware: Middleware<T>[] = [];
+
+    constructor({
+        handle
+    }: {
+        handle?: Middleware<T> | Middleware<T>[]
+    } = {}) {
+        super(); // EventEmitter can be used in extensions of this class
+
+        if(handle) {
+            if(!Array.isArray(handle)) handle = [handle];
+
+            for(const item of handle) {
+                this.use(item);
+            }
+        }
+    }
 
     // --- Configuration ---
 
@@ -93,7 +111,7 @@ export class RouteMap<T extends RequestObject> {
 
     // --- Execution ---
 
-    url(name: string, params: Record<string, any> = {}): string {
+    route(name: string, params: Record<string, any> = {}): string {
         const route = this.routes.find((r) => r.name === name);
         if (!route)
             throw new Error(`[RouteMap] Route with name "${name}" not found.`);
@@ -111,12 +129,18 @@ export class RouteMap<T extends RequestObject> {
         return path;
     }
 
-    public async handle(path: string, req: T): Promise<any> {
+    public async evaluateRouteMap(req: T): Promise<any> {
+        req.path = req.path || '/';
+
+        try {
+            req.path = new URL(req.path).pathname;
+        } catch (error) {}
+
         const method = (req.method || "get").toLowerCase();
 
         for (const route of this.routes) {
             if (route.method !== method) continue;
-            const match = path.match(route.pattern);
+            const match = req.path.match(route.pattern);
             if (match) {
                 const params = match.slice(1);
                 (req as any).params = route.paramNames.reduce(

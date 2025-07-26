@@ -4,7 +4,7 @@
 [NPM Package](https://www.npmjs.com/package/fictif)
 
 ## What is Fictif?
-Fictif is a full-stack application framework for building modern, server-driven web apps with Vue 3 — without needing to maintain a separate frontend API. It blends the power of classic server-side tools like Laravel with the speed of SPAs, offering a flexible, composable alternative to Inertia.js, Nuxt, and Vue Router.
+Fictif is a full-stack application framework **with 0 runtime dependencies** for building modern, server-driven web apps with Vue 3 — without needing to maintain a separate frontend API. It blends the power of classic server-side tools like Laravel with the speed of SPAs, offering a flexible, composable alternative to Inertia.js, Nuxt, and Vue Router.
 
 Whether you're building Laravel hybrids, Electron apps, PWAs, or fully client-side SPAs, Fictif adapts effortlessly — with zero runtime dependencies and a tiny footprint.
 
@@ -19,7 +19,7 @@ Whether you're building Laravel hybrids, Electron apps, PWAs, or fully client-si
 - **Secure & Performant:** A tiny, dependency-free client, build-time route obfuscation, and first-class support for modern web security practices.
 
 ## Documentation
-We are currently writing documentation for this library, we will cover basic usage here.
+We are currently writing documentation for this library, but we will cover basic usage here.
 
 ## Installation
 
@@ -39,6 +39,7 @@ pnpm i fictif
 ## Usage
 
 For inertia-like usage, scroll down.
+
 Let's get straight to the point,
 
 Add this to your vite.config.js
@@ -53,6 +54,7 @@ export default defineConfig({
 
 ```
 
+### Structure
 Your project structure should look like:
 ```
 resources/
@@ -66,6 +68,7 @@ resources/
         ... Your views ( screens )
 ```
 
+### `resources/js/app.js`
 ```js
 import { createFictifApp } from 'fictif'
 import 'fictif/style'
@@ -91,6 +94,7 @@ createFictifApp((route) => {
     });
 ```
 
+### `resources/screens/welcome.screen.vue`
 ```vue
 <template>
     Hello {{ abcd }}
@@ -104,7 +108,7 @@ createFictifApp((route) => {
 That's all 🧨
 
 ## Inertia-like Usage
-If you have an inertiajs compatible backend, like laravel with inertia installed, do this in your `app.js`
+If you have an Inertiajs compatible backend, like laravel with inertia installed, do this in your `app.js`
 ```js
 import { createFictifApp } from 'fictif'
 import 'fictif/style'

@@ -90,7 +90,7 @@ export function useForm<T extends FormDataType>(initialData: T | (() => T)) {
 
         router.once('push', handleSuccess);
         router.once('error', handleError);
-        router.go(url, visitOptions).finally(handleFinish);
+        router.visit(url, visitOptions).finally(handleFinish);
     };
 
     // Build the final form object with field refs + controls

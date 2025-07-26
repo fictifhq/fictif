@@ -1,19 +1,12 @@
 // src/client/types.ts
 
 import type { Component } from 'vue';
-import type { RouteMap } from './composables/route-map.ts'
+import type { Middleware } from './composables/route-map.ts'
 
-export type PageResult = Record<string, any> & { url: string };
-export type ExplictResolveFunction = (
-    url: string,
-    request: VisitOptions
-) => Promise<PageResult | undefined>;
-
-export type ResolveFunction = ExplictResolveFunction
-        | RouteMap<VisitOptions>;
+export type PageResult = Record<string, any> & { path: string };
 
 export interface RouterOptions {
-    resolve: ResolveFunction | ResolveFunction[];
+    handle?: Middleware<VisitOptions> | Middleware<VisitOptions>[];
 }
 
 /**
@@ -22,7 +15,7 @@ export interface RouterOptions {
 export interface Page {
     component: string | Component;
     props: Record<string, any>;
-    url: string;
+    path: string;
     version: string | null;
     [key: string]: any;
 }
@@ -32,6 +25,7 @@ export interface Page {
  */
 export interface VisitOptions {
     method?: 'get' | 'post' | 'put' | 'delete' | 'patch';
+    path?: string;
     body?: Record<string, any>;
     headers?: Record<string, string>;
     preserveScroll?: boolean;

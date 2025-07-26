@@ -1,17 +1,16 @@
 // src/client/router-factories.ts
 
-import { type ShallowRef } from 'vue';
-import { PageResult } from './types.js';
-import { useEndpoint } from './composables/endpoint.js';
-import type { Page, VisitOptions, ResolveFunction } from './types.js';
+import { useEndpoint } from "./composables/endpoint.js";
+import { type Middleware } from "./composables/route-map.js";
+import type { Page, VisitOptions } from "./types.js";
 
 /**
  * Configuration options for the endpoint-driven resolver.
  */
-interface EndpointResolverOptions {
-    prefix?: string;
-    version?: string | (() => string | null) | null;
-    //page: ShallowRef<Page>;
+interface InertiaHandlerOptions {
+  prefix?: string;
+  version?: string | (() => string | null) | null;
+  //page: ShallowRef<Page>;
 }
 
 /**
@@ -21,76 +20,82 @@ interface EndpointResolverOptions {
  * This is the "batteries-included" resolver for full-stack applications.
  *
  * @param {EndpointResolverOptions} options Configuration for the resolver.
- * @returns A new ResolveFunction function to be used in `resolve: `.
+ * @returns A new Middleware<VisitOptions> function to be used in `handle: `.
  */
-export function createEndpointResolver({
-    prefix = 'X-Inertia',
-    version = null,
-    //page,
-}: EndpointResolverOptions = {}): ResolveFunction {
-    return async (path: string, options: VisitOptions = {}) => {
-            const endpoint = useEndpoint();
+export function createInertiaHandler({
+  prefix = "X-Inertia",
+  version = null,
+  //page,
+}: InertiaHandlerOptions = {}): Middleware<VisitOptions> {
+  return async (request: VisitOptions, next) => {
+    const endpoint = useEndpoint();
 
-            let currentVersion = 'static';
+    let currentVersion = "static";
 
-            if(typeof version === 'function') {
-                currentVersion = version() || 'static';
-            }else if(typeof version === 'string') {
-                currentVersion = version;
-            }else if(typeof version === 'number') {
-                currentVersion = String(version);
-            }else{
-                // Bring the version from the old page state
-                if(options.old) currentVersion = options.old.version || 'static';
-            }
+    if (typeof version === "function") {
+      currentVersion = version() || "static";
+    } else if (typeof version === "string") {
+      currentVersion = version;
+    } else if (typeof version === "number") {
+      currentVersion = String(version);
+    } else {
+      // Bring the version from the old page state
+      if (request.old) currentVersion = request.old.version || "static";
+    }
 
-            const headers = {
-                'X-Requested-With': 'XMLHttpRequest',
-                [prefix]: 'true',
-                // Send the asset version on every visit
-                ...(currentVersion && { [prefix + '-Version']: currentVersion }),
-                // Send partial reload headers if specified
-                ...(options.only?.length && {
-                    [prefix + '-Only']: options.only.join(','),
-                    //[prefix + '-Partial-Component']: page.value.component as string,
-                }),
-                ...options.headers,
-            };
+    const headers = {
+      "X-Requested-With": "XMLHttpRequest",
+      [prefix]: "true",
+      // Send the asset version on every visit
+      ...(currentVersion && { [prefix + "-Version"]: currentVersion }),
+      // Send partial reload headers if specified
+      ...(request.only?.length && {
+        [prefix + "-Only"]: request.only.join(","),
+        //[prefix + '-Partial-Component']: page.value.component as string,
+      }),
+      ...request.headers,
+    };
 
-            try {
-                const response = await endpoint.request(path, {
-                    method: options.method,
-                    body: options.body,
-                    headers,
-                });
+    try {
+      const response = await endpoint.request(request.path || "/", {
+        method: request.method,
+        body: request.body,
+        headers,
+      });
 
-                return response as Page;
-            } catch (error: any) {
-                if (!error.response) {
-                    // Network error = no response object, is the server offline?
-                    return undefined; // anyways, allow other resolvers to take over
-                }
+      return {
+        path: response.url, // For inertia compatibility
+        ...response,
+      } as Page;
+    } catch (error: any) {
+      if (!error.response) {
+        // Network error = no response object, is the server offline?
+        return next(request);
+      }
 
-                const response = error.response;
+      const response = error.response;
 
-                // inertia version conflict (force reload)
-                if (response.status === 409 && response.headers.get(prefix + '-Location')) {
-                    throw new Error('Asset version mismatch, forcing full reload.');
-                }
+      // inertia version conflict (force reload)
+      if (
+        response.status === 409 &&
+        response.headers.get(prefix + "-Location")
+      ) {
+        throw new Error("Asset version mismatch, forcing full reload.");
+      }
 
-                // redirect responses
-                if ([301, 302].includes(response.status)) {
-                    window.location.href = response.headers.get('Location') || path;
-                    throw new Error('Server-side redirect.');
-                }
+      // redirect responses
+      if ([301, 302].includes(response.status)) {
+        window.location.href = response.headers.get("Location") || request.path;
+        throw new Error("Server-side redirect.");
+      }
 
-                // Validation error: let useForm handle it
-                if (response.status === 422) {
-                    throw error;
-                }
+      // Validation error: let useForm handle it
+      if (response.status === 422) {
+        throw error;
+      }
 
-                // Server error (5xx or anything else not handled)
-                throw error; // Propagate the error for higher-level handling
-            }
-        };
+      // Server error (5xx or anything else not handled)
+      throw error; // Propagate the error for higher-level handling
+    }
+  };
 }

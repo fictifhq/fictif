@@ -1,26 +1,24 @@
 // src/client/composables/router.ts
 
-import { EventEmitter } from "./events.js";
 import { reactive, Reactive } from "vue";
 import type {
     PageResult,
     VisitOptions,
-    ResolveFunction,
     RouterOptions,
-    ExplictResolveFunction,
 } from "../types.js";
-import { RouteMap } from "./route-map.js";
+
+import { RouteMap, Middleware } from "./route-map.js";
 
 // --- Chainable Response Helpers ---
 
 class ResponseBuilder {
-    // Internally, the result can have a flexible URL.
-    protected result: Partial<Omit<PageResult, "url">> & {
-        url?: string | "==back==";
+    // Internally, the result can have a flexible PATH.
+    protected result: Partial<Omit<PageResult, "path">> & {
+        path?: string | "==back==";
         redirect?: string;
     } = {
-        // By default, the URL is undefined, signaling the router to use the request path.
-        url: undefined,
+        // By default, the PATH is undefined, signaling the router to use the request path.
+        path: undefined,
     };
 
     component(component: any): this {
@@ -31,8 +29,8 @@ class ResponseBuilder {
         this.result.props = { ...(this.result.props || {}), ...props };
         return this;
     }
-    asUrl(url: string): this {
-        this.result.url = url;
+    asPath(path: string): this {
+        this.result.path = path;
         return this;
     }
     message(message: string): this {
@@ -50,28 +48,33 @@ class ResponseBuilder {
     }
 }
 
-/** Builds a standard page response. The URL will default to the visited path. */
+/** Builds a standard page response. The PATH will default to the visited path. */
 export function response(): ResponseBuilder {
     return new ResponseBuilder();
 }
 
-/** Builds a standard page response. The URL will default to the visited path. */
+/** Builds a standard page response. The PATH will default to the visited path, this function is an alias for `screen(...)` */
 export function view(component: string): ResponseBuilder {
     return new ResponseBuilder().component(component);
 }
 
-/** Builds a response that keeps the user on the same URL but merges new props. */
+/** Builds a standard page response. The PATH will default to the visited path. */
+export function screen(component: string): ResponseBuilder {
+    return new ResponseBuilder().component(component);
+}
+
+/** Builds a response that keeps the user on the same PATH but merges new props. */
 export function back(): ResponseBuilder {
     const builder = new ResponseBuilder();
     builder["result"].component = false; // `false` is the signal to keep the old component
-    builder["result"].url = "==back=="; // `==back==` is the signal to keep the old URL
+    builder["result"].path = "==back=="; // `==back==` is the signal to keep the old PATH
     return builder;
 }
 
-/** Builds a response that triggers a client-side redirect to a new URL. */
-export function redirect(url: string): ResponseBuilder {
+/** Builds a response that triggers a client-side redirect to a new PATH. */
+export function redirect(path: string): ResponseBuilder {
     const builder = new ResponseBuilder();
-    builder["result"].redirect = url;
+    builder["result"].redirect = path;
     return builder;
 }
 
@@ -105,34 +108,21 @@ export function shouldInterceptLink(
     );
 }
 
-export class Router extends EventEmitter {
+export class Router extends RouteMap<VisitOptions> {
     private state: Reactive<PageResult>;
     private options: RouterOptions;
     private navigationPrevented = false;
 
-    resolveFunctions: ExplictResolveFunction[] = [];
+    constructor(options: RouterOptions = {}) {
+        super({
+            handle: options?.handle
+        });
 
-    constructor(options: RouterOptions) {
-        super();
-        this.options = options;
-
-        const resolvers = Array.isArray(options.resolve)
-            ? options.resolve
-            : [options.resolve];
-
-        this.resolveFunctions = resolvers.map((r) =>
-            typeof r == "function"
-                ? r
-                : typeof r == "object" && r && typeof r.handle == "function"
-                ? r.handle.bind(r)
-                : async function () {
-                      return undefined;
-                  }
-        );
+        this.options = options || {};
 
         this.state = reactive({
             props: {},
-            url: typeof window !== "undefined" ? window.location.pathname : "/",
+            path: typeof window !== "undefined" ? window.location.pathname : "/",
             component: null,
             version: null,
         });
@@ -141,8 +131,8 @@ export class Router extends EventEmitter {
     public get result(): PageResult {
         return this.state;
     }
-    public get url(): string {
-        return this.state.url;
+    public get path(): string {
+        return this.state.path;
     }
 
     public async init(interceptLinks: boolean = true): Promise<void> {
@@ -157,7 +147,7 @@ export class Router extends EventEmitter {
         historyInfluencer = this;
 
         window.addEventListener("popstate", (event: PopStateEvent) => {
-            if (event.state?.fictif) this.go(event.state.path);
+            if (event.state?.fictif) this.visit(event.state.path);
         });
 
         if (interceptLinks) {
@@ -172,14 +162,14 @@ export class Router extends EventEmitter {
 
                     if (!link.hasAttribute("download")) {
                         await this.emit("navigation", {
-                            url: link.href,
+                            path: link.href,
                         });
                     }
 
                     if (!shouldInterceptLink(link, event)) return;
 
                     event.preventDefault();
-                    this.go(link.href, {
+                    this.visit(link.href, {
                         only: link.dataset.only?.split(","),
                         preserveScroll: link.hasAttribute(
                             "data-preserve-scroll"
@@ -195,11 +185,7 @@ export class Router extends EventEmitter {
         this.navigationPrevented = true;
     }
 
-    public async go(path: string, options: VisitOptions = {}): Promise<void> {
-        try {
-            path = new URL(path).pathname;
-        } catch (error) {}
-
+    public async visit(path: string, options: VisitOptions = {}): Promise<void> {
         this.navigationPrevented = false;
         await this.emit("leaving", { path });
         if (this.navigationPrevented) return;
@@ -207,7 +193,7 @@ export class Router extends EventEmitter {
         await this.emit("navigation", { path });
 
         try {
-            let partialResult = await this.resolveRoute(path, options);
+            let partialResult = await this.resolve(path, options);
 
             if (
                 typeof partialResult == "object" &&
@@ -228,24 +214,24 @@ export class Router extends EventEmitter {
 
             // --- REDIRECT HANDLING ---
             if (partialResult.redirect) {
-                await this.go(partialResult.redirect, { replace: true });
+                await this.visit(partialResult.redirect, { replace: true });
                 return;
             }
 
-            // --- INTELLIGENT URL RESOLUTION ---
-            let finalUrl: string;
-            if (partialResult.url === "==back==") {
-                finalUrl = this.state.url;
-            } else if (!partialResult.url) {
-                finalUrl = path;
+            // --- INTELLIGENT PATH RESOLUTION ---
+            let finalPath: string;
+            if (partialResult.path === "==back==") {
+                finalPath = this.state.path;
+            } else if (!partialResult.path) {
+                finalPath = path;
             } else {
-                finalUrl = partialResult.url;
+                finalPath = partialResult.path;
             }
 
             // Build the final, complete PageResult object
             const finalResult: PageResult = {
                 ...partialResult,
-                url: finalUrl,
+                path: finalPath,
             };
 
             await this.emit("navigated", { page: finalResult });
@@ -272,15 +258,15 @@ export class Router extends EventEmitter {
         // Update state with the final, merged data
         this.state.component = newComponent;
         this.state.props = newProps;
-        this.state.url = result.url; // URL is now guaranteed to be a string
+        this.state.path = result.path; // PATH is now guaranteed to be a string
         if (result.version) this.state.version = result.version;
 
         const historyMethod = options.replace ? "replaceState" : "pushState";
         if (historyInfluencer === this) {
             window.history[historyMethod](
-                { fictif: true, path: result.url },
+                { fictif: true, path: result.path },
                 "",
-                result.url
+                result.path
             );
         }
 
@@ -288,7 +274,7 @@ export class Router extends EventEmitter {
         await this.emit("ready", { page: this.state });
     }
 
-    private async resolveRoute(
+    private async resolve(
         path: string,
         options: VisitOptions = {}
     ): Promise<any> {
@@ -298,57 +284,28 @@ export class Router extends EventEmitter {
             method: options.method || "get",
             old: this.result,
         };
-        for (const resolve of this.resolveFunctions) {
-            const result = await resolve(path, req);
-            if (result !== undefined) {
-                // Return the raw result from the handler, `go` will process it.
-                return result;
-            }
-        }
+        return this.evaluateRouteMap(req);
     }
 }
 
-export function createRouterFromResolver(resolve: ResolveFunction | Router): Router {
-    if(resolve instanceof Router) {
-        return resolve;
+export function useRouter(options?: RouterOptions | Router  | Middleware<VisitOptions> | Middleware<VisitOptions>[]): Router {
+    if(options instanceof Router) {
+        return options;
     }
 
-    return useRouter({
-        resolve,
-    });
-}
+    if(Array.isArray(options) || typeof options == 'function') {
+        return new Router({
+            handle: options
+        });
+    }
 
-/**
- * Shorthand for creating a Router from a RouteMap.
- *
- * This helper simplifies the setup of route definitions without requiring
- * manual creation and connection of `RouteMap` and `Router` separately.
- *
- * @example
- * ```ts
- * const router = rMap((route) => {
- *   route.get('/', () => view('home'));
- * });
- * ```
- *
- * @param configure - Callback to define routes on the RouteMap.
- * @returns Router instance ready for FictifApp or manual use.
- */
-export function rMap(
-  configure: (routes: RouteMap<VisitOptions>) => void
-): Router {
-  const routeMap = new RouteMap<VisitOptions>();
-  configure(routeMap);
-  return createRouterFromResolver(routeMap);
-}
-
-
-export function useRouter(options?: RouterOptions): Router {
-    if (options) {
+    if (typeof options == 'object' && options != null) {
         return new Router(options);
     }
+
     if (globalRouterInstance) {
         return globalRouterInstance;
     }
-    throw new Error("[Fictif] No global router has been initialized.");
+
+    throw new Error("[Fictif] No global router has been initialized to be used.");
 }

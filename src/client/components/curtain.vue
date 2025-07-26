@@ -42,7 +42,10 @@ const props = defineProps({
 const isBgImageLoaded = ref(false);
 
 onMounted(() => {
-  document.querySelectorAll('.fictif-pre-curtain').forEach(e => e.remove());
+  const preCurtain = document.querySelectorAll(".fictif-pre-curtain");
+  for (const item of preCurtain) {
+    item.remove()
+  }
 });
 
 const lockBodyScroll = () => {

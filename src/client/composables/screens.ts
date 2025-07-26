@@ -7,7 +7,7 @@ import type { Component } from 'vue';
 type ScreenComponent = Component;
 
 interface ScreenResolver {
-    screen: (name: string) => Promise<ScreenComponent>;
+    resolve: (name: string) => Promise<ScreenComponent>;
     has: (name: string) => boolean;
     list: () => string[];
 }
@@ -22,7 +22,7 @@ function createScreenResolver(): ScreenResolver {
         return isProd ? (nameToId as Record<string, string>)[name] || name : name;
     }
 
-    async function screen(name: string | object): Promise<ScreenComponent> {
+    async function resolve(name: string | object): Promise<ScreenComponent> {
         if(typeof name == 'object') return name as ScreenComponent;
 
         const id = getScreenId(name);
@@ -47,7 +47,7 @@ function createScreenResolver(): ScreenResolver {
         return Object.keys(nameToId);
     }
 
-    return { screen, has, list };
+    return { resolve, has, list };
 }
 
 /**
