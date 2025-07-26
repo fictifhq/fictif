@@ -41,26 +41,14 @@ jobs:
           cd "${{ runner.temp }}/release"
           zip -r dist.zip dist
 
-      - name: Determine version
-        id: vars
-        run: echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
-
-      - name: Create Git tag
-        env:
-          VERSION: ${{ steps.vars.outputs.version }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f "v${VERSION}"
-          git push -f origin "v${VERSION}"
-
       - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.vars.outputs.version }}
-          name: Release v${{ steps.vars.outputs.version }}
+          tag_name: release-${{ github.run_number }}
+          name: Release #${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
           body: |
-            Automated release of version v${{ steps.vars.outputs.version }}.
+            Automated hot release for run #${{ github.run_number }} on branch ${{ github.ref_name }}.
           draft: false
           prerelease: false
           files: |
