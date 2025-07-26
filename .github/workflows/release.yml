@@ -1,4 +1,3 @@
-```yaml
 name: Build and Publish to “release” Branch
 
 on:
@@ -61,4 +60,3 @@ jobs:
           git add dist package.json README.md
           git commit -m "Automated update of release artifacts"
           git push -f origin release
-```
