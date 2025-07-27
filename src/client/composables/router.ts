@@ -80,7 +80,7 @@ export function redirect(path: string): ResponseBuilder {
 
 // --- Router Implementation ---
 
-let globalRouterInstance: Router | null = null;
+export let global: Router | null = null;
 let historyInfluencer: Router | null = null;
 
 export function shouldInterceptLink(
@@ -120,6 +120,10 @@ export class Router extends RouteMap<VisitOptions> {
 
         this.options = options || {};
 
+        if(this.options.global == undefined || this.options.global ) {
+            this.init();
+        }
+
         this.state = reactive({
             props: {},
             path: typeof window !== "undefined" ? window.location.pathname : "/",
@@ -135,15 +139,15 @@ export class Router extends RouteMap<VisitOptions> {
         return this.state.path;
     }
 
-    public async init(interceptLinks: boolean = true): Promise<void> {
-        if (globalRouterInstance) {
-            if (globalRouterInstance != this)
+    public init(interceptLinks: boolean = true): void {
+        if (global) {
+            if (global != this)
                 console.warn(
                     "[Fictif] A global router is already initialized."
                 );
             return;
         }
-        globalRouterInstance = this;
+        global = this;
         historyInfluencer = this;
 
         window.addEventListener("popstate", (event: PopStateEvent) => {
@@ -152,25 +156,23 @@ export class Router extends RouteMap<VisitOptions> {
 
         if (interceptLinks) {
             document.addEventListener("click", (event: MouseEvent) => {
-                (async () => {
-                    const link = (event.target as Element).closest("a");
-                    if (!link) return;
+                const link = (event.target as Element).closest("a");
+                if (!link) return;
 
-                    const method = (
-                        link.getAttribute("method") || "get"
-                    ).toLowerCase();
+                const method = (
+                    link.getAttribute("method") || "get"
+                ).toLowerCase();
 
-                    if (!shouldInterceptLink(link, event)) return;
+                if (!shouldInterceptLink(link, event)) return;
 
-                    event.preventDefault();
-                    this.visit(link.getAttribute('href') || '/', {
-                        only: link.dataset.only?.split(","),
-                        preserveScroll: link.hasAttribute(
-                            "data-preserve-scroll"
-                        ),
-                        method: method as any,
-                    });
-                })();
+                event.preventDefault();
+                this.visit(link.getAttribute('href') || '/', {
+                    only: link.dataset.only?.split(","),
+                    preserveScroll: link.hasAttribute(
+                        "data-preserve-scroll"
+                    ),
+                    method: method as any,
+                });
             });
         }
     }
@@ -282,6 +284,8 @@ export class Router extends RouteMap<VisitOptions> {
     }
 }
 
+type ConfigRouterFunction = (router: Router) => any | Promise<any>;
+
 export function useRouter(options?: RouterOptions | Router  | Middleware<VisitOptions> | Middleware<VisitOptions>[]): Router {
     if(options instanceof Router) {
         return options;
@@ -291,8 +295,8 @@ export function useRouter(options?: RouterOptions | Router  | Middleware<VisitOp
         return createRouter(options);
     }
 
-    if (globalRouterInstance) {
-        return globalRouterInstance;
+    if (global) {
+        return global;
     }
 
     throw new Error("[Fictif] No global router has been initialized to be used.");

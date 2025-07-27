@@ -1,5 +1,3 @@
-// src/plugin/index.ts
-
 import type { ResolvedConfig, ViteDevServer } from 'vite';
 import type { FictifOptions, FictifPlugin, ResolvedFictifOptions, ScreenManifest } from './types.js';
 import { buildScreenManifest, generateVirtualScreensModule } from './manifest.js';
@@ -7,18 +5,41 @@ import { buildScreenManifest, generateVirtualScreensModule } from './manifest.js
 const VIRTUAL_SCREENS_ID = 'virtual:fictif-screens-data';
 const RESOLVED_VIRTUAL_SCREENS_ID = '\0' + VIRTUAL_SCREENS_ID;
 
+function injectInheritAttrsFalse(code: string): string {
+  if (!code.includes('<script setup')) return code;
+
+  const defineOptionsRegex = /defineOptions\s*\(\s*{([\s\S]*?)}\s*\)/;
+
+  if (defineOptionsRegex.test(code)) {
+    // Already has defineOptions — try merging into it
+    return code.replace(defineOptionsRegex, (match, content) => {
+      // If it already contains inheritAttrs, leave it alone
+      if (/inheritAttrs\s*:/.test(content)) return match;
+
+      // Else, inject inheritAttrs: false
+      const newContent = content.trim().endsWith(',')
+        ? `${content} inheritAttrs: false`
+        : `${content}, inheritAttrs: false`;
+
+      return `defineOptions({${newContent}})`;
+    });
+  } else {
+    // No defineOptions present — inject a new one after <script setup>
+    return code.replace(
+      /<script setup(.*?)>/,
+      `<script setup$1>\ndefineOptions({ inheritAttrs: false });`
+    );
+  }
+}
+
 export default function fictif(userOptions: FictifOptions = {}): FictifPlugin {
   let config: ResolvedConfig;
   let manifest: ScreenManifest;
   let options: ResolvedFictifOptions;
 
-  // Debounce/rebuild control
   let rebuildTimeout: NodeJS.Timeout | null = null;
   let rebuildInProgress = false;
 
-  /**
-   * Schedule an async rebuild of the screen manifest with minimal delay.
-   */
   function scheduleManifestRebuild(server: ViteDevServer) {
     if (rebuildInProgress) return;
     if (rebuildTimeout) clearTimeout(rebuildTimeout);
@@ -38,7 +59,7 @@ export default function fictif(userOptions: FictifOptions = {}): FictifPlugin {
       } finally {
         rebuildInProgress = false;
       }
-    }, 10); // 10ms debounce for rapid file changes
+    }, 10);
   }
 
   return {
@@ -58,7 +79,6 @@ export default function fictif(userOptions: FictifOptions = {}): FictifPlugin {
       config = _config;
       const root = config.root;
 
-      // Resolve user options
       let screensOptions: ResolvedFictifOptions['screens'];
       if (userOptions.screens === false) {
         screensOptions = false;
@@ -98,11 +118,9 @@ export default function fictif(userOptions: FictifOptions = {}): FictifPlugin {
 
       watcher.on('add', onChange);
       watcher.on('unlink', onChange);
-      watcher.on('change', onChange);
     },
 
     buildStart() {
-      // Initial manifest build (async)
       return buildScreenManifest(options).then((m) => {
         manifest = m;
       });
@@ -121,24 +139,12 @@ export default function fictif(userOptions: FictifOptions = {}): FictifPlugin {
     },
 
     transform(code, id) {
-      // Only apply transform in build
-      if (config.command !== 'build') return;
       if (id.includes('node_modules') || id.startsWith('\0')) return;
-      if (!code.includes('screen(') && !code.includes('has(')) return;
+      if (!id.endsWith('.screen.vue')) return;
+      if (!code.includes('<script setup')) return;
 
-      const screenResolveRegex = /(screen|has)\s*\(\s*['"`](.+?)['"`]\s*\)/g;
-      let transformed = code;
-      let match: RegExpExecArray | null;
-
-      while ((match = screenResolveRegex.exec(code))) {
-        const [full, fn, name] = match;
-        const def = manifest.get(name);
-        if (def) {
-          const replacement = `${fn}('${def.obfuscatedId}')`;
-          transformed = transformed.replace(full, replacement);
-        }
-      }
-
+      // Inject or merge defineOptions({ inheritAttrs: false })
+      const transformed = injectInheritAttrsFalse(code);
       return { code: transformed, map: null };
     },
   };

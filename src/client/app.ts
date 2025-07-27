@@ -10,15 +10,14 @@ import {
     createSSRApp,
 } from "vue";
 import { useScreens } from "./composables/screens.js";
-import { Router, useRouter } from "./composables/router.js";
+import { Router, useRouter, global as globalRouter } from "./composables/router.js";
+import { useHead, global as globalHeadManager, type HeadManager } from "./composables/head.js";
 import { createInertiaHandler } from "./router-factories.js";
 import Display from "./components/display.vue";
-import { MetaTag, useHead, HeadData } from "./composables/head.js";
 import { defaults, useCurtain } from "./composables/curtain.js";
 import Curtain from "./components/curtain.vue";
 import type { Page, VisitOptions, PageResult, RouterOptions } from "./types.js";
-
-type ConfigRouterFunction = (router: Router) => any | Promise<any>;
+import Head from "./components/head.vue";
 
 interface FictifAppOptions {
     mountTo?: string | HTMLElement;
@@ -35,49 +34,51 @@ interface FictifAppOptions {
         | {
               delay?: number;
           };
-    router?: RouterOptions | Router | ConfigRouterFunction;
     initialData?: string | object | undefined;
     copyInitialData?: boolean;
     isSSR?: boolean;
-    title?: (title: string) => string;
-    meta?: (meta: MetaTag[]) => MetaTag[];
-    favicon?: (title: string) => string;
 }
 
+export const FictifVuePlugin = {
+  install(app: VueApp) {
+    app.component('Head', Head)
+  }
+}
 
-
-export async function createFictifApp(config?: FictifAppOptions | Router | ConfigRouterFunction) {
-    if(typeof config == 'function') {
-        const rtr = new Router();
-        await config(rtr); // Handle router setup func
-
-        config = {
-            router: rtr
-        }
-    }
-
+export async function createFictifApp(config?: FictifAppOptions) {
     let {
         mountTo = "#app",
         setup,
         progress = {},
         resolve: providedResolve,
-        router: providedRouter,
         initialData = undefined,
         copyInitialData = true,
-        title = (t: string) => t,
-        meta = (m: MetaTag[]) => m,
-        favicon = (t: string) => t,
         isSSR = undefined
     } = typeof config == 'object' && config ? config as any : {};
 
     let router: Router;
+    let head: HeadManager;
 
-    if(providedRouter) {
-        router = useRouter(providedRouter);
+    if(globalRouter) {
+        router = useRouter();
     }else{
         router = useRouter({
             handle: createInertiaHandler()
-        })
+        });
+
+        router.init();
+    };
+
+    if(globalHeadManager) {
+        head = useHead();
+    }else{
+        head = useHead({
+            // maybe some default config
+
+            title: (title) => title ? title + ' | ' + import.meta.env.VITE_APP_NAME : import.meta.env.VITE_APP_NAME
+        });
+
+        head.init();
     };
 
     const resolve = providedResolve || useScreens().resolve;
@@ -105,7 +106,6 @@ export async function createFictifApp(config?: FictifAppOptions | Router | Confi
             });
 
 
-    const head = useHead();
 
     router.on(
         "push",
@@ -161,35 +161,34 @@ export async function createFictifApp(config?: FictifAppOptions | Router | Confi
                 document.body.classList.add("fictif-app-mounted");
             });
 
-            return () =>
-                h("div", { id: "fictif-root-wrapper" }, [
+            return () => {
+                const c = h("div", { id: "fictif-root-wrapper" }, [
                     h(Curtain, {}),
                     renderedPage.value && typeof renderedPage.value.component == "object"
                         ? h(Display, {
                               key: renderedPage.value.path,
                               // @ts-ignore
                               screen: renderedPage.value.component,
-                              headUpdate (data: HeadData) {
-                                  head.update({
-                                      title: typeof title == 'function' ? title(data.title || '') : data.title,
-                                      meta: typeof meta == 'function' ? meta(data.meta || []) : data.meta,
-                                      favicon: typeof favicon == 'function' ? favicon(data.favicon || '') : data.favicon,
-                                  });
-                              },
                               ...renderedPage.value.props,
                           })
                         : undefined,
                 ]);
+
+                head.update({reset: false}); // Ensure default values even if no Head exists
+
+                return c;
+            };
         },
     };
 
     let app: any;
 
     if (setup) {
-        app = setup({ el: mountTo, App });
+        app = setup({ el: mountTo, App, plugin: FictifVuePlugin });
     } else {
         const isSsr = typeof isSSR == 'boolean' ? isSSR : (mountTo && mountTo.hasAttribute("data-server-rendered"));
         app = isSsr ? createSSRApp(App) : createApp(App);
+        app.use(FictifVuePlugin);
     }
 
     if(mountTo) {

@@ -7,6 +7,7 @@ export type PageResult = Record<string, any> & { path: string };
 
 export interface RouterOptions {
     handle?: Middleware<VisitOptions> | Middleware<VisitOptions>[];
+    global?: boolean;
 }
 
 /**

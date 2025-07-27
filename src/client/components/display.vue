@@ -12,8 +12,6 @@
 <script setup lang="ts">
 import { shallowRef, watch, useAttrs, type Component, type PropType } from 'vue';
 
-type HeadUpdateFunction = (data: { title?: string; meta?: any[] }) => void;
-
 defineOptions({
     inheritAttrs: false,
 });
@@ -21,10 +19,6 @@ defineOptions({
 const props = defineProps({
     screen: {
         type: Object as PropType<Component>,
-        required: true,
-    },
-    headUpdate: {
-        type: Function as PropType<HeadUpdateFunction>,
         required: true,
     },
 });
@@ -44,8 +38,6 @@ watch(() => props.screen, (newScreen) => {
     const layout = screenOptions.layout || null;
     const title = screenOptions.title || '';
     const meta = screenOptions.meta || [];
-
-    props.headUpdate({ title, meta });
 
     const layoutChanged =
         layout !== previousLayout &&
