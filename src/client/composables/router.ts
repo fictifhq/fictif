@@ -163,7 +163,7 @@ export class Router extends RouteMap<VisitOptions> {
                     if (!shouldInterceptLink(link, event)) return;
 
                     event.preventDefault();
-                    this.visit(link.href, {
+                    this.visit(link.getAttribute('href') || '/', {
                         only: link.dataset.only?.split(","),
                         preserveScroll: link.hasAttribute(
                             "data-preserve-scroll"
@@ -287,14 +287,8 @@ export function useRouter(options?: RouterOptions | Router  | Middleware<VisitOp
         return options;
     }
 
-    if(Array.isArray(options) || typeof options == 'function') {
-        return new Router({
-            handle: options
-        });
-    }
-
-    if (typeof options == 'object' && options != null) {
-        return new Router(options);
+    if(Array.isArray(options) || typeof options == 'function' || typeof options == 'object') {
+        return createRouter(options);
     }
 
     if (globalRouterInstance) {
@@ -302,4 +296,19 @@ export function useRouter(options?: RouterOptions | Router  | Middleware<VisitOp
     }
 
     throw new Error("[Fictif] No global router has been initialized to be used.");
+}
+
+export function createRouter(options?: RouterOptions | Router  | Middleware<VisitOptions> | Middleware<VisitOptions>[]): Router {
+    if(options instanceof Router) {
+        return options;
+    }
+
+    if(Array.isArray(options) || typeof options == 'function') {
+        return new Router({
+            handle: options
+        });
+    }
+
+
+    return new Router(options);
 }

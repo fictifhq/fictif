@@ -21,7 +21,7 @@ export interface Page {
 }
 
 /**
- * Options for a single router visit, used by router.go() and useForm.
+ * Options for a single router visit, used by router.visit() and useForm.
  */
 export interface VisitOptions {
     method?: 'get' | 'post' | 'put' | 'delete' | 'patch';

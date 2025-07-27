@@ -37,6 +37,30 @@ pnpm i fictif
 # or use npm
 ```
 
+## Structure
+We came to resolve a big pain-point, how should a vue app be structured?
+
+We recommend all file and folder names to be in lower-case.
+
+Your project structure should look like:
+```
+resources/
+    js/
+        app.js
+        ... Your javascript files
+    css/
+        ... Your css files
+    layouts/
+        ... Your layouts
+    components/
+        ... Your components
+    composables/
+        ... Your composables
+    screens/
+        welcome.screen.vue
+        ... Your views ( screens )
+```
+
 ## Usage
 
 For inertia-like usage, scroll down.
@@ -55,23 +79,9 @@ export default defineConfig({
 
 ```
 
-### Structure
-Your project structure should look like:
-```
-resources/
-    js/
-        app.js
-        ... Your javascript files
-    css/
-        ... Your css files
-    screens/
-        welcome.page.vue
-        ... Your views ( screens )
-```
-
 ### `resources/js/app.js`
 ```js
-import { createFictifApp } from 'fictif'
+import { createFictifApp, view } from 'fictif'
 import 'fictif/style'
 
 createFictifApp((route) => {
@@ -131,6 +141,8 @@ import { useRouter } from 'fictif';
 
 const router = useRouter(); // Get the globally initialized router
 
+router.path; // Current visited path
+
 // Listen to lifecycle events
 router.on('leaving', () => {
     if (hasUnsavedChanges()) {
@@ -148,7 +160,7 @@ router.on('push', ({ page }) => {
 });
 
 // Programmatic navigation
-router.go('/dashboard');
+router.visit('/dashboard');
 ```
 
 
@@ -173,41 +185,14 @@ const submit = () => {
 
 <template>
   <form @submit.prevent="submit">
-    <input type="text" v-model="form.data.name">
+    <input type="text" v-model="form.name">
     <div v-if="form.errors.name">{{ form.errors.name }}</div>
 
-    <input type="file" @input="form.data.avatar = $event.target.files[0]">
+    <input type="file" @input="form.avatar = $event.target.files[0]">
 
     <button type="submit" :disabled="form.processing">Save</button>
   </form>
 </template>
-```
-
-### RouterMap (For Client-Side Routing)
-For SPAs or advanced routing needs, the RouterMap provides a powerful, Express.js-style API for defining your routes on the client.
-
-```js
-// A custom resolver using RouterMap
-import { RouterMap, response, redirect } from 'fictif';
-
-const rm = new RouterMap();
-
-// Apply a middleware to a group of routes
-rm.middleware('auth', (req, next) => {
-    if (!isLoggedIn()) {
-        return redirect('/login').build();
-    }
-    return next(req);
-});
-
-rm.group(admin => {
-    admin.get('/dashboard', () => response().component('admin.dashboard'));
-    admin.get('/users', () => response().component('admin.users'));
-}).prefix('/admin').applyMiddleware('auth');
-
-
-// Use it in your router
-const router = new Router({ resolve: rm });
 ```
 
 ## Help

@@ -206,7 +206,7 @@ export async function createFictifApp(config?: FictifAppOptions | Router | Confi
         router.on("navigation", () => {
             progressTimeout = window.setTimeout(
                 curtain.start,
-                (progress as any)?.delay || 0
+                (progress as any)?.delay || 300
             );
         });
         const finishProgress = () => {

@@ -46,6 +46,14 @@ export default function fictif(userOptions: FictifOptions = {}): FictifPlugin {
     enforce: 'pre',
     api: { getManifest: () => manifest },
 
+    config(config) {
+      config.optimizeDeps ??= {};
+      config.optimizeDeps.exclude ??= [];
+      if (!config.optimizeDeps.exclude.includes(VIRTUAL_SCREENS_ID)) {
+        config.optimizeDeps.exclude.push(VIRTUAL_SCREENS_ID);
+      }
+    },
+
     configResolved(_config) {
       config = _config;
       const root = config.root;

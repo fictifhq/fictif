@@ -30,7 +30,7 @@ function createScreenResolver(): ScreenResolver {
 
         if (!loader) {
             const available = Object.keys(nameToId);
-            console.error(`[Fictif] Screen not found: "${name}" with id: "${id}". Available: ${available.join(', ')}`);
+            console.error(`[Fictif] Screen not found: "${name}" with id: "${id}".`);
             throw new Error(`Screen not found: ${name}`);
         }
 
