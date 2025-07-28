@@ -1,3 +1,5 @@
+// src/client/composables/element.ts
+
 /**
  * Shakes a given DOM element to simulate a real window-like shake.
  * - Applies X and Y transform-based jitter

@@ -39,7 +39,8 @@
   "module": "./dist/client/index.js",
   "types": "./src/client/index.d.ts",
   "scripts": {
-    "build": "node build.mjs",
+    "build": "node scripts/build.mjs",
+    "buildDocs": "node scripts/buildDocs.mjs",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {

@@ -30,14 +30,14 @@ const sharedConfig = {
 const builds = [
   {
     name: 'client',
-    entry: path.resolve(__dirname, 'src/client/index.ts'),
-    outDir: path.resolve(__dirname, 'dist/client'),
+    entry: path.resolve(__dirname, '../src/client/index.ts'),
+    outDir: path.resolve(__dirname, '../dist/client'),
     external: ['vue', 'virtual:fictif-screens-data'],
   },
   {
     name: 'plugin',
-    entry: path.resolve(__dirname, 'src/plugin/index.ts'),
-    outDir: path.resolve(__dirname, 'dist/plugin'),
+    entry: path.resolve(__dirname, '../src/plugin/index.ts'),
+    outDir: path.resolve(__dirname, '../dist/plugin'),
     external: ['fast-glob', 'node:path'],
   },
 ]

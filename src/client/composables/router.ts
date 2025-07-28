@@ -112,6 +112,7 @@ export class Router extends RouteMap<VisitOptions> {
     private state: Reactive<PageResult>;
     private options: RouterOptions;
     private navigationPrevented = false;
+    private navigating = false;
 
     constructor(options: RouterOptions = {}) {
         super({
@@ -178,11 +179,16 @@ export class Router extends RouteMap<VisitOptions> {
     }
 
     public async visit(path: string, options: VisitOptions = {}): Promise<void> {
-        this.navigationPrevented = false;
-        await this.emit("leaving", { path });
-        if (this.navigationPrevented) return;
+        if(!this.navigating) {
+            this.navigationPrevented = false;
+            await this.emit("leaving", { path });
+            if (this.navigationPrevented) return;
 
-        await this.emit("navigation", { path });
+            await this.emit("navigation", { path });
+            this.navigating = true;
+        }
+
+        this.emit('step', { path, options });
 
         try {
             let partialResult = await this.resolve(path, options);
@@ -226,6 +232,7 @@ export class Router extends RouteMap<VisitOptions> {
                 path: finalPath,
             };
 
+            this.navigating = false;
             await this.emit("navigated", { page: finalResult });
             await this.push(finalResult, options);
         } catch (error) {

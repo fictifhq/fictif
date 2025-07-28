@@ -3,11 +3,19 @@
 <template>
     <KeepAlive v-if="activeLayout">
         <component :is="activeLayout" v-bind="attrs">
-            <component :is="screen" v-bind="attrs" />
+            <component
+                :is="screen"
+                v-bind="attrs"
+                :key="renderKey" />
         </component>
     </KeepAlive>
-    <component :is="screen" v-else v-bind="attrs" />
+    <component
+        :is="screen"
+        v-else
+        v-bind="attrs"
+        :key="renderKey" />
 </template>
+
 
 <script setup lang="ts">
 import { shallowRef, watch, useAttrs, type Component, type PropType } from 'vue';
@@ -21,6 +29,10 @@ const props = defineProps({
         type: Object as PropType<Component>,
         required: true,
     },
+    renderKey: {
+        type: [String, Number],
+        required: true,
+    }
 });
 
 const attrs = useAttrs();

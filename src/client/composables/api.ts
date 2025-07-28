@@ -2,7 +2,6 @@
 
 // --- ENVIRONMENT & TYPE IMPORTS ---
 const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
-type NodeReadStream = import('stream').Readable;
 
 // --- ISOMORPHIC COOKIE JAR ---
 class CookieJar {
@@ -526,10 +525,10 @@ export class API {
     private _addUploadProgress(body: BodyInit, onProgress: (p: { loaded: number, total: number }, c: ProgressContext) => void, context: ProgressContext): { body: ReadableStream, total: number } | null {
         // Node.js: Handle fs.ReadStream for progress
         if (!isBrowser && typeof (body as any).on === 'function') {
-            const stream = body as unknown as NodeReadStream;
+            const stream = body as unknown as any;
             const total = (stream as any).readableLength || 0;
             let loaded = 0;
-            stream.on('data', (chunk) => {
+            stream.on('data', (chunk: any) => {
                 loaded += chunk.length;
                 onProgress({ loaded, total }, context);
             });

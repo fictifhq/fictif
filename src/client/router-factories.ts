@@ -14,8 +14,7 @@ interface InertiaHandlerOptions {
 }
 
 /**
- * Creates a pre-configured Fictif Resolver instance that communicates with a backend
- * using the Inertia.js protocol.
+ * Creates a pre-configured Fictif Middleware instance that catches routing requests and communicates with a backend using the Inertia.js protocol.
  *
  * This is the "batteries-included" resolver for full-stack applications.
  *

@@ -37,6 +37,7 @@ interface FictifAppOptions {
     initialData?: string | object | undefined;
     copyInitialData?: boolean;
     isSSR?: boolean;
+    appName: string;
 }
 
 export const FictifVuePlugin = {
@@ -53,7 +54,8 @@ export async function createFictifApp(config?: FictifAppOptions) {
         resolve: providedResolve,
         initialData = undefined,
         copyInitialData = true,
-        isSSR = undefined
+        isSSR = undefined,
+        appName = 'App'
     } = typeof config == 'object' && config ? config as any : {};
 
     let router: Router;
@@ -75,7 +77,7 @@ export async function createFictifApp(config?: FictifAppOptions) {
         head = useHead({
             // maybe some default config
 
-            title: (title) => title ? title + ' | ' + import.meta.env.VITE_APP_NAME : import.meta.env.VITE_APP_NAME
+            title: (title) => title ? title + ' | ' + appName : appName
         });
 
         head.init();
@@ -116,15 +118,15 @@ export async function createFictifApp(config?: FictifAppOptions) {
             page: Page;
             options: VisitOptions;
         }) => {
+            const component =
+            typeof page.component === "string"
+            ? await resolve(page.component)
+            : page.component;
+
             // Here, we handle scroll preservation before updating the page
-            if (!visitOptions.preserveScroll) {
+            if (typeof visitOptions.preserveScroll == "boolean" ? !visitOptions.preserveScroll : renderedPage.value.component != component) {
                 window.scrollTo(0, 0);
             }
-
-            const component =
-                typeof page.component === "string"
-                    ? await resolve(page.component)
-                    : page.component;
 
             // Handle partial reloads by merging props
             if (visitOptions.only?.length) {
@@ -169,6 +171,7 @@ export async function createFictifApp(config?: FictifAppOptions) {
                               key: renderedPage.value.path,
                               // @ts-ignore
                               screen: renderedPage.value.component,
+                              renderKey: `${renderedPage.value.path}-${Date.now()}`,
                               ...renderedPage.value.props,
                           })
                         : undefined,

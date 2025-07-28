@@ -1,3 +1,5 @@
+<!--client/components/head.vue-->
+
 <script setup lang="ts">
 import {
   watchEffect,
@@ -25,7 +27,7 @@ try {
 
 const parseSlotsToData = (): HeadUpdateData => {
   const data: HeadUpdateData = { children: [] };
-  if (!slots.default) return data;
+  if (!(slots as any).default) return data;
 
   const walk = (nodes: VNode[]) => {
     for (const vnode of nodes) {
@@ -64,7 +66,7 @@ const parseSlotsToData = (): HeadUpdateData => {
     }
   };
 
-  walk(slots.default());
+  walk((slots as any).default());
   return data;
 };
 

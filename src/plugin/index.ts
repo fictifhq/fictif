@@ -1,3 +1,5 @@
+// plugin/index.ts
+
 import type { ResolvedConfig, ViteDevServer } from 'vite';
 import type { FictifOptions, FictifPlugin, ResolvedFictifOptions, ScreenManifest } from './types.js';
 import { buildScreenManifest, generateVirtualScreensModule } from './manifest.js';
