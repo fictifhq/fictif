@@ -1,0 +1,1 @@
+{"version":3,"file":"manifest.d.ts","sourceRoot":"","sources":["../../src/plugin/manifest.ts"],"names":[],"mappings":"AAIA,OAAO,KAAK,EAAE,qBAAqB,EAAoB,cAAc,EAAE,MAAM,YAAY,CAAC;AAqB1F,wBAAsB,mBAAmB,CAAC,OAAO,EAAE,qBAAqB,GAAG,OAAO,CAAC,cAAc,CAAC,CAqGjG;AAED,wBAAgB,4BAA4B,CAAC,QAAQ,EAAE,cAAc,GAAG,MAAM,CAc7E"}
