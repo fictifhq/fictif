@@ -7,7 +7,6 @@ export type PageResult = Record<string, any> & { path: string };
 
 export interface RouterOptions {
     handle?: Middleware<VisitOptions> | Middleware<VisitOptions>[];
-    global?: boolean;
 }
 
 /**
@@ -25,7 +24,7 @@ export interface Page {
  * Options for a single router visit, used by router.visit() and useForm.
  */
 export interface VisitOptions {
-    method?: 'get' | 'post' | 'put' | 'delete' | 'patch';
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
     path?: string;
     body?: Record<string, any>;
     headers?: Record<string, string>;

@@ -11,7 +11,7 @@ import {
 } from "vue";
 import { useScreens } from "./composables/screens.js";
 import { Router, useRouter, global as globalRouter } from "./composables/router.js";
-import { useHead, global as globalHeadManager, type HeadManager } from "./composables/head.js";
+import { useHead, globalHead, type HeadManager } from "./composables/head.js";
 import { createInertiaHandler } from "./router-factories.js";
 import Display from "./components/display.vue";
 import { defaults, useCurtain } from "./composables/curtain.js";
@@ -69,7 +69,7 @@ export async function createFictifApp(config?: FictifAppOptions) {
         router.init();
     };
 
-    if(globalHeadManager) {
+    if(globalHead) {
         head = useHead();
     }else{
         head = useHead({

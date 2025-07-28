@@ -1,11 +1,11 @@
 // src/client/router-factories.ts
 
-import { useEndpoint } from "./composables/endpoint.js";
+import { useAPI } from "./composables/api.js";
 import { type Middleware } from "./composables/route-map.js";
 import type { Page, VisitOptions } from "./types.js";
 
 /**
- * Configuration options for the endpoint-driven resolver.
+ * Configuration options for the api-driven resolver.
  */
 interface InertiaHandlerOptions {
   prefix?: string;
@@ -19,8 +19,7 @@ interface InertiaHandlerOptions {
  *
  * This is the "batteries-included" resolver for full-stack applications.
  *
- * @param {EndpointResolverOptions} options Configuration for the resolver.
- * @returns A new Middleware<VisitOptions> function to be used in `handle: `.
+ * @returns A new Middleware<VisitOptions> function to be used in `handle: ` or `use()`.
  */
 export function createInertiaHandler({
   prefix = "X-Inertia",
@@ -28,7 +27,7 @@ export function createInertiaHandler({
   //page,
 }: InertiaHandlerOptions = {}): Middleware<VisitOptions> {
   return async (request: VisitOptions, next) => {
-    const endpoint = useEndpoint();
+    const api = useAPI();
 
     let currentVersion = "static";
 
@@ -57,7 +56,7 @@ export function createInertiaHandler({
     };
 
     try {
-      const response = await endpoint.request(request.path || "/", {
+      const response = await api.request(request.path || "/", {
         method: request.method,
         body: request.body,
         headers,

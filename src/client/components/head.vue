@@ -84,12 +84,10 @@ const updateHead = () => {
     ],
   };
 
-  console.log('RRR', finalData);
   manager.update(finalData);
 };
 
 onMounted(() => {
-  console.log('Updated');
   updateHead();
   watchEffect(updateHead);
 });

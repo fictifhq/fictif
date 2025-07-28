@@ -15,7 +15,6 @@ export type HeadOptions = {
     namedMeta?: Record<string, OptionsModifier<any>>;
     link?: Record<string, LinkValue | LinkValue[]>;
     script?: ScriptValue[];
-    global?: boolean;
 };
 
 export type HeadUpdateData = Record<string, any> & {
@@ -33,7 +32,7 @@ type InternalHeadTag = {
 };
 
 // --- SINGLETON HOLDER ---
-export let global: HeadManager | null = null;
+export let globalHead: HeadManager | null = null;
 
 // --- HeadManager CLASS ---
 export class HeadManager {
@@ -44,14 +43,10 @@ export class HeadManager {
     constructor(options: HeadOptions) {
         this.options = options;
         this.managedTagKey = Math.random().toString(36).substring(7);
-
-        if(this.options.global == undefined || this.options.global ) {
-            this.init();
-        }
     }
 
     public init() {
-        global = this;
+        globalHead = this;
     }
 
     public update(data: HeadUpdateData) {
@@ -219,8 +214,20 @@ export class HeadManager {
 
 export function useHead(options?: HeadOptions): HeadManager {
     if (options) {
-        return new HeadManager(options);
+        return createHead(options);
     }
-    if (!global) throw new Error("[Fictif Head] No global HeadManager initialized.");
-    return global;
+    if (!globalHead) {
+        return createHead(); // Temporary empty head manager for now
+    };
+    return globalHead;
+}
+
+export function createHead(options?: HeadOptions): HeadManager {
+    return new HeadManager(options || {});
+}
+
+export function initHead(options?: HeadOptions): HeadManager {
+    const head = createHead(options);
+    head.init();
+    return head;
 }

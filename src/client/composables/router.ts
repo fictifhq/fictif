@@ -120,10 +120,6 @@ export class Router extends RouteMap<VisitOptions> {
 
         this.options = options || {};
 
-        if(this.options.global == undefined || this.options.global ) {
-            this.init();
-        }
-
         this.state = reactive({
             props: {},
             path: typeof window !== "undefined" ? window.location.pathname : "/",
@@ -277,14 +273,12 @@ export class Router extends RouteMap<VisitOptions> {
         const req = {
             ...options,
             path,
-            method: options.method || "get",
+            method: options.method || "GET",
             old: this.result,
         };
         return this.dispatch(req);
     }
 }
-
-type ConfigRouterFunction = (router: Router) => any | Promise<any>;
 
 export function useRouter(options?: RouterOptions | Router  | Middleware<VisitOptions> | Middleware<VisitOptions>[]): Router {
     if(options instanceof Router) {
@@ -315,4 +309,10 @@ export function createRouter(options?: RouterOptions | Router  | Middleware<Visi
 
 
     return new Router(options);
+}
+
+export function initRouter(options?: RouterOptions | Router  | Middleware<VisitOptions> | Middleware<VisitOptions>[]): Router {
+    const router = createRouter(options);
+    router.init();
+    return router;
 }
