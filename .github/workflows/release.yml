@@ -30,7 +30,7 @@ jobs:
           pnpm install
 
       - name: Run build
-        run: pnpm exec node build.mjs
+        run: pnpm exec node scripts/build.mjs
 
       - name: Prepare release artifacts
         run: |
@@ -60,3 +60,4 @@ jobs:
           git add dist package.json README.md
           git commit -m "Automated update of release artifacts"
           git push -f origin release
+
